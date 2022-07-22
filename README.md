@@ -3,7 +3,7 @@ Team-portfolio-backend
 This is portfolio-type website. One can add info about their team their achievements, technologies & other tasks
 
 This project is developed using:
-Laravel (framework)
+Laravel (framework),
 Mysql (Database)
 
 -> Project setup
