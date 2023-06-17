@@ -1,0 +1,78 @@
+version: '3.8'
+services:
+
+  # PHP Server
+  portfolio_service:
+    build: 
+      context: . # path of Dockerfile
+      dockerfile: Dockerfile
+      # target: php # FROM php:8.0 as php [here php is a alias] 
+      args:
+        - APP_ENV = ${APP_ENV}
+    
+    image: portfolio_service
+    restart: unless-stopped # automatically restarts the MySQL server if stops
+    tty: true #enambles shell interface
+
+    working_dir: /var/www # [/var/www] is the standard though you can use any name
+
+    environment:
+      - APP_ENV = ${APP_ENV}
+      - CONTAINER_ROLE = APP_ENV
+
+    volumes:
+      - ./:/var/www
+    networks:
+      - portfolio_service_network
+
+    ports:
+      - 8000:8000
+    depends_on:
+      - portfolio_service_db
+
+
+  #Database Server
+  portfolio_service_db:
+    image: mysql:8.0
+    container_name: portfolio_service_db
+    restart: unless-stopped # automatically restarts the MySQL server if stops
+    tty: true #enambles shell interface
+    ports:
+      - 8001:3306 # custom_port_number : actual_port_number
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE} #database name
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD} #database root password
+      - MYSQL_USER=${DB_USERNAME} #database user
+      - MYSQL_PASSWORD=${DB_PASSWORD} #database password
+    volumes:
+      - portfolio_data:/var/lib/mysql
+    networks:
+      - portfolio_service_network
+    
+    # SERVICE_TAGS: dev
+    # SERVICE_NAME: mysql
+
+  portfolio_service_phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    container_name: portfolio_service_phpmyadmin
+    depends_on:
+      - portfolio_service_db
+    ports:
+      - "8011:80"
+    environment:
+      PMA_HOST: portfolio_service_db
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - portfolio_service_network
+
+
+
+#Docker Networks
+networks:
+  portfolio_service_network:
+    driver: bridge
+
+volumes:
+  portfolio_data: ~
+  
