@@ -1,92 +1,80 @@
 version: '3.8'
 services:
 
-  # PHP Server
-  app:
-    build: 
-      args:
-        user: tayson
-        uid: 1000
-      context: ./ # path of Dockerfile
-      dockerfile: Dockerfile
+    #   PHP Server
+    portfolio:
+        build:
+            args:
+                user: naser
+                uid: 1000
+            context: ./ # path of Dockerfile
+            dockerfile: Dockerfile
 
-    image: portfolio_service
-    container_name: portfolio_service
-    restart: unless-stopped # automatically restarts the MySQL server if stops
+        image: portfolio
+        container_name: portfolio
+        restart: unless-stopped # automatically restarts the MySQL server if stops
 
-    working_dir: /var/www # [/var/www] is the standard though you can use any name
-    volumes:
-      - ./:/var/www
+        working_dir: /var/www # [/var/www] is the standard though you can use any name
+        volumes:
+            - ./:/var/www
 
-    networks:
-      - portfolio_service_network
+        networks:
+            - portfolio_network
 
-    # environment:
-    #   - APP_ENV = ${APP_ENV}
-    #   - CONTAINER_ROLE = APP_ENV
+    #   Database Server
+    portfolio_db:
+        image: mysql:8.0
+        container_name: portfolio_db
+        restart: unless-stopped # automatically restarts the MySQL server if stops
 
-    # ports:
-    #   - 8000:8000
-    # depends_on:
-    #   - portfolio_service_db
+        ports:
+            - "8098:3306" # custom_port_number : actual_port_number
 
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE} #database name
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} #database root password
+            MYSQL_PASSWORD: ${DB_PASSWORD} #database password
+            MYSQL_USER: ${DB_USERNAME} #database user
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
 
-  #Database Server
-  db:
-    image: mysql:8.0
-    container_name: portfolio_service_db
-    restart: unless-stopped # automatically restarts the MySQL server if stops
+        volumes:
+            - portfolio_data:/var/lib/mysql
+        networks:
+            - portfolio_network
 
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE} #database name
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} #database root password
-      MYSQL_USER: ${DB_USERNAME} #database user
-      MYSQL_PASSWORD: ${DB_PASSWORD} #database password
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
-    # volumes:
-    #   - portfolio_data:/var/lib/mysql
-    networks:
-      - portfolio_service_network
+    #   Nginx Server
+    portfolio_nginx:
+        image: nginx:latest
+        container_name: portfolio_nginx
+        restart: unless-stopped
+        ports:
+            - "9000:80"
+        volumes:
+            - ./:/var/www
+            - ./docker-compose/nginx:/etc/nginx/conf.d
+        networks:
+            - portfolio_network
 
-      # ports:
-      # - 8001:3306 # custom_port_number : actual_port_number
+    #    phpmyadmin
+    portfolio_phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: portfolio_phpmyadmin
+        restart: unless-stopped
+        depends_on:
+            - portfolio_db
+        ports:
+            - "9080:80"
+        environment:
+            PMA_HOST: portfolio_db
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+        networks:
+            - portfolio_network
 
-  nginx:
-    image: nginx:latest
-    container_name: portfolio_service_nginx
-    restart: unless-stopped
-    ports:
-        - 8000:80
-    volumes:
-      - ./:/var/www
-      - ./docker-compose/nginx:/etc/nginx/conf.d
-    networks:
-      - portfolio_service_network
-    
-    
-
-  # portfolio_service_phpmyadmin:
-  #   image: phpmyadmin/phpmyadmin
-  #   restart: unless-stopped
-  #   container_name: portfolio_service_phpmyadmin
-  #   depends_on:
-  #     - portfolio_service_db
-  #   ports:
-  #     - "8011:80"
-  #   environment:
-  #     PMA_HOST: portfolio_service_db
-  #     MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-  #   networks:
-  #     - portfolio_service_network
-
-
-
-#Docker Networks
+#   Docker Networks
 networks:
-  portfolio_service_network:
-    driver: bridge
+    portfolio_network:
+        driver: bridge
 
-# volumes:
-#   portfolio_data: ~
-  
+volumes:
+    portfolio_data: ~
